@@ -12,6 +12,17 @@ public class EList {
 		this.nm = new NodeManager(this.head, null);
 	}
 
+	private EList(EList original)
+	{
+		this.head = original.head;
+		this.nm = original.nm;
+	}
+
+	public EList cloneInstance()
+	{
+		return new EList(this);
+	}
+
 	// check if node is broken
 	// (i.e., can read/write)
 	boolean is_brokenNode(ListNode node)
@@ -22,12 +33,13 @@ public class EList {
 			node.obj = node.obj;
 			node.hash = node.hash;
 			node.next = node.next;
+
+			return false; // not broken node
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			return true; // broken node
 		}
-		return false; // not broken node
 	}
 
 	// add new entry to NodeManager
@@ -84,6 +96,7 @@ public class EList {
 	}
 
 	// get previous node from manager
+	// only used for node discard (skip)
 	ListNode getPrevNode(ListNode n)
 	{
 		try
@@ -93,10 +106,12 @@ public class EList {
 			if (n == this.head) return null; // previous node of head node doesn't exist
 
 			while (m != null) {
-				if (m.next_ndaddr == n)
+				if (m.next_ndaddr == n) // found
 					return m.ndaddr;
 				m = m.next;
 			}
+
+			return null; // not found
 
 		}
 		catch (ECCuncorrectableMemoryError eme)
@@ -104,11 +119,10 @@ public class EList {
 			System.out.println("getPrevNode failed");
 			return null;
 		}
-
-		return null;
 	}
 
 	// get next node from manager
+	// only used for node discard (skip)
 	ListNode getNextNode(ListNode n)
 	{
 		try
@@ -116,27 +130,28 @@ public class EList {
 			NodeManager m = this.nm;
 
 			while (m != null) {
-				if (m.ndaddr == n)
+				if (m.ndaddr == n) // found
 					return m.next_ndaddr;
 				m = m.next;
 			}
+
+			return null; // not found
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			System.out.println("getNextNode failed");
 			return null;
 		}
-
-		return null;
 	}
 
-	// replace broken head-node of list
+	// replace broken head node of list
+	// since head is broken, accessing head.next is dangerous
 	void replaceHead()
 	{
 		try
 		{
 			ListNode newhead = new ListNode();
-			ListNode next = getNextNode(this.head);
+			ListNode next = getNextNode(this.head); // avoid accessing head.next
 
 			if (next != null) {
 				newhead.next = next;
@@ -257,6 +272,7 @@ public class EList {
 		}
 	}
 
+	// search and get object from given hashcode
 	public Object getObject(int hash)
 	{
 		ListNode n = this.head;
@@ -270,6 +286,8 @@ public class EList {
 					return n.obj;
 				n = n.next;
 			}
+
+			return null;
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
@@ -283,6 +301,5 @@ public class EList {
 			}
 		}
 
-		return null;
 	}
 }

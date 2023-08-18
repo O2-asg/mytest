@@ -3,7 +3,7 @@ import epackage.EChainHash;
 public class EMEsChainHashTester {
 	public static void main(String[] args)
 	{
-		int NUM = 1000;
+		int NUM = 10;
 
 		EChainHash ch = new EChainHash();
 		int hashholder[] = new int[NUM];
