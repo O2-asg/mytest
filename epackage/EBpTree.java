@@ -1,6 +1,6 @@
 package epackage;
 
-// EMEs-aware B+-tree node
+// EMEs-aware B+-tree
 public class EBpTree {
 	BpTreeNode root;
 
@@ -73,7 +73,6 @@ public class EBpTree {
 			if (key <= node.keys[i]) {
 				node.keys[i] = node.keys[i+1];
 				node.nodes[i+1] = node.nodes[i+2];
-				break;
 			}
 		}
 
@@ -82,21 +81,20 @@ public class EBpTree {
 		node.size--;
 	}
 
-	void delete_key_from_node(int key, BpTreeNode node)
+	void delete_key_from_leaf(int key, BpTreeNode node)
 	{
-		if (node.size == 0) return;
+		if (node.size == 0 || !node.is_leaf) return;
 
 		int i;
 		for (i = 0; i < node.size-1; i++) {
 			if (key <= node.keys[i]) {
 				node.keys[i] = node.keys[i+1];
 				node.nodes[i] = node.nodes[i+1];
-				break;
 			}
 		}
 
 		node.keys[i] = -1;
-		node.nodes[i+1] = null;
+		node.nodes[i] = null;
 		node.size--;
 	}
 
@@ -204,7 +202,7 @@ public class EBpTree {
 			}
 
 			insert_key_to_leaf(left.keys[i], left.nodes[i-1], right);
-			delete_key_from_node(left.keys[i], left);
+			delete_key_from_leaf(left.keys[i], left);
 		}
 
 		if (left.size == d/2)
