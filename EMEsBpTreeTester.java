@@ -21,5 +21,13 @@ class EMEsBpTreeTester {
 		t.insert(15, null);
 		t.insert(17, null);
 		t.p();
+		System.out.println("--------------------");
+
+		t.delete(41);
+		t.delete(47);
+		t.delete(37);
+		t.delete(38);
+		t.delete(42);
+		t.p();
 	}
 }

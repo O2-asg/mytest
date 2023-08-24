@@ -299,6 +299,7 @@ public class EList {
 				skip_brokenNode(n);
 				return null;
 			}
+			return null;
 		}
 
 	}

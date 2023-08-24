@@ -6,7 +6,8 @@ public class EChainHash {
 	// should be a prime number?
 	public static final int BUCKET_SIZE = 1021;
 
-	// EMEs might occur when accessing tbl[idx]?
+	// EMEs might occur when accessing tbl[idx]
+	// two tables must be at other places
 	EList tbl[];
 	EList backup_tbl[];
 
@@ -17,6 +18,7 @@ public class EChainHash {
 		this.backup_tbl = new EList[BUCKET_SIZE];
 	}
 
+	// broken table check
 	boolean is_brokenArray(EList lst[])
 	{
 		try
@@ -57,6 +59,7 @@ public class EChainHash {
 		}
 	}
 
+	// store new key and value
 	public void hash_store(Object obj, int hashcode)
 	{
 		int idx = hashcode % BUCKET_SIZE;
@@ -79,25 +82,48 @@ public class EChainHash {
 		}
 	}
 
+	// delete key and value using key
 	public void hash_delete(int hashcode)
 	{
 		int idx = hashcode % BUCKET_SIZE;
-		EList lst = this.tbl[idx];
 
-		if (lst == null)
-			return;
+		try
+		{
+			if (this.tbl[idx] == null)
+				return;
 
-		lst.delNode(hashcode);
+			this.tbl[idx].delNode(hashcode);
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			if (is_brokenArray(this.tbl)) {
+				this.tbl = reallocate_table(this.backup_tbl);
+				this.backup_tbl = reallocate_table(this.backup_tbl);
+			}
+		}
 	}
 
+	// get object from hashcode (key)
 	public Object hash_get(int hashcode)
 	{
 		int idx = hashcode % BUCKET_SIZE;
-		EList lst = this.tbl[idx];
 
-		if (lst == null)
+		try
+		{
+			if (this.tbl[idx] == null)
+				return null;
+
+			return this.tbl[idx].getObject(hashcode);
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			if (is_brokenArray(this.tbl)) {
+				this.tbl = reallocate_table(this.backup_tbl);
+				this.backup_tbl = reallocate_table(this.backup_tbl);
+				return hash_get(hashcode); // try again!
+			}
+
 			return null;
-
-		return lst.getObject(hashcode);
+		}
 	}
 }

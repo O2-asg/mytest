@@ -114,7 +114,8 @@ public class EBpTree {
 		return node;
 	}
 
-	void insert_key_to_leaf(int key, Object obj, BpTreeNode node)
+	// objnode: node that contains only object information
+	void insert_key_to_leaf(int key, BpTreeNode objnode, BpTreeNode node)
 	{
 		if (node.size == BpTreeNode.degree && !node.is_leaf) return;
 
@@ -125,7 +126,7 @@ public class EBpTree {
 		}
 
 		node.keys[i] = key;
-		node.nodes[i] = new BpTreeNode(obj);
+		node.nodes[i] = objnode;
 		node.size++;
 	}
 
@@ -183,7 +184,7 @@ public class EBpTree {
 		}
 	}
 
-	void insert_leaf_split(int key, Object obj, BpTreeNode node)
+	void insert_leaf_split(int key, BpTreeNode objnode, BpTreeNode node)
 	{
 		BpTreeNode left, right;
 		int d = BpTreeNode.degree;
@@ -196,22 +197,188 @@ public class EBpTree {
 		int i;
 		for (i = left.size-1; right.size < (d+1)/2; i--) {
 			if ((left.keys[i] < key) && !right.is_key_included(key)) {
-				insert_key_to_leaf(key, obj, right);
+				insert_key_to_leaf(key, objnode, right);
 				i++;
 				continue;
 			}
 
-			insert_key_to_leaf(left.keys[i], left.nodes[i-1], right);
+			insert_key_to_leaf(left.keys[i], left.nodes[i], right);
 			delete_key_from_leaf(left.keys[i], left);
 		}
 
 		if (left.size == d/2)
-			insert_key_to_leaf(key, obj, left);
+			insert_key_to_leaf(key, objnode, left);
 
 		right.nodes[d] = left.nodes[d];
 		left.nodes[d] = right;
 
 		insert_nodes_to_node(left, right, left.parent);
+	}
+
+	void rewrite_key(int before, int after, BpTreeNode node)
+	{
+		if (node == null) return;
+
+		for (int i = 0; i < node.size; i++) {
+			if (node.keys[i] == before) {
+				node.keys[i] = after;
+				break;
+			}
+		}
+
+		rewrite_key(before, after, node.parent); // recursive call
+	}
+
+	void delete_key_enough(int key, BpTreeNode node)
+	{
+		if (!node.is_leaf) return;
+
+		int head_entry = node.keys[0];
+
+		delete_key_from_leaf(key, node);
+
+		if (key == head_entry) {
+			rewrite_key(key, minimum_key(node), node.parent);
+		}
+	}
+
+	void merge_nodes(BpTreeNode node_a, BpTreeNode node_b)
+	{
+		if (node_a == null || node_a.has_enough_entry_node()) return;
+
+		int i = 0;
+		while (node_b.nodes[i] != null) {
+			insert_node_to_node(node_b.nodes[i], node_a);
+			i++;
+		}
+	}
+
+	void balance_tree(BpTreeNode node)
+	{
+		if (node == this.root) {
+			if (node.nodes[1] != null) { // two or more sub-trees
+				// do nothing
+			} else { // only one sub-tree
+				this.root = node.nodes[0];
+			}
+			return; // finish balancing
+		}
+
+		if (node.nodes[(BpTreeNode.degree)/2] != null) { // entries >= ROUNDUP((degree+1)/2)
+			// node has enough entries
+			return;
+		} else {
+			int i;
+			BpTreeNode left = null;
+			BpTreeNode right = null;
+			for (i = 0; i <= node.parent.size; i++) {
+				if (node.parent.nodes[i] == node) {
+					if (i != 0) left = node.parent.nodes[i-1];
+					if (i != node.parent.size) right = node.parent.nodes[i+1];
+					break;
+				}
+			}
+			if (left != null) {
+				if (left.has_enough_entry_node()) {
+					insert_node_to_node(left.nodes[left.size], node);
+					delete_node_from_node(left.nodes[left.size], left);
+					rewrite_key(minimum_key(node.nodes[1]), minimum_key(node.nodes[0]), node.parent);
+					return;
+				}
+			}
+			if (right != null) {
+				if (right.has_enough_entry_node()) {
+					insert_node_to_node(right.nodes[0], node);
+					for (i = 0; i < right.size; i++) {
+						right.keys[i] = right.keys[i+1];
+						right.nodes[i] = right.nodes[i+1];
+					}
+					right.nodes[i] = null;
+					right.size--;
+					rewrite_key(minimum_key(node.nodes[node.size]), minimum_key(right.nodes[0]), node.parent);
+					return;
+				}
+			}
+
+			// merge
+			if (left != null) {
+				merge_nodes(left, node);
+				delete_node_from_node(node, node.parent);
+				balance_tree(node.parent);
+				return;
+			} else if (right != null) {
+				// implies node is leftmost child of node.parent
+				merge_nodes(right, node);
+				for (i = 0; i < node.parent.size; i++) {
+					node.parent.keys[i] = node.parent.keys[i+1];
+					node.parent.nodes[i] = node.parent.nodes[i+1];
+				}
+				node.parent.nodes[i] = null;
+				node.parent.size--;
+				balance_tree(node.parent);
+				return;
+			}
+		}
+	}
+
+	// merge leaf_b entries into leaf_a
+	// leaf_b will be removed
+	void merge_leaves(BpTreeNode leaf_a, BpTreeNode leaf_b)
+	{
+		if (leaf_a == null || leaf_a.has_enough_entry_leaf()) return;
+		if (leaf_a.parent != leaf_b.parent) return;
+
+		int i;
+		for (i = 0; i < leaf_b.size; i++) {
+			insert_key_to_leaf(leaf_b.keys[i], leaf_b.nodes[i], leaf_a);
+		}
+	}
+
+	void delete_key_not_enough(int key, BpTreeNode node)
+	{
+		if (!node.is_leaf) return;
+
+		if (key == node.keys[0])
+			rewrite_key(node.keys[0], node.keys[1], node.parent);
+		delete_key_from_leaf(key, node);
+
+		// right leaf check
+		BpTreeNode right = node.nodes[BpTreeNode.degree];
+		if (right != null && node.parent == right.parent) {
+			if (right.has_enough_entry_leaf()) {
+				insert_key_to_leaf(right.keys[0], right.nodes[0], node);
+				delete_key_from_leaf(right.keys[0], right);
+				rewrite_key(node.keys[node.size-1], right.keys[0], node.parent);
+				return;
+			}
+		}
+
+		// left leaf check
+		BpTreeNode left = search_node(node.keys[0]-1);
+		if (left != null && left.parent == node.parent) {
+			if(left.has_enough_entry_leaf()) {
+				insert_key_to_leaf(left.keys[left.size-1], left.nodes[left.size-1], node);
+				delete_key_from_leaf(left.keys[left.size-1], left);
+				rewrite_key(node.keys[1], node.keys[0], node.parent);
+				return;
+			}
+		}
+
+		// merge
+		int i;
+		BpTreeNode p = node.parent;
+		if (left != null && left.parent == node.parent) { // merge into left leaf
+			left.nodes[BpTreeNode.degree] = right;
+			merge_leaves(left, node);
+			delete_node_from_node(node, p);
+			balance_tree(p);
+		} else if (right != null) { // merge into right leaf
+		// implies node == node.parent.nodes[0]
+			node.nodes[BpTreeNode.degree] = right.nodes[BpTreeNode.degree];
+			merge_leaves(node, right);
+			delete_node_from_node(right, p);
+			balance_tree(p);
+		}
 	}
 
 	void print_node(BpTreeNode node)
@@ -242,11 +409,27 @@ public class EBpTree {
 	{
 		BpTreeNode node = search_node(key);
 
+		if (node.is_key_included(key)) return;
+
 		if (node.size < BpTreeNode.degree) {
-			insert_key_to_leaf(key, obj, node);
+			insert_key_to_leaf(key, new BpTreeNode(obj), node);
+		} else {
+			insert_leaf_split(key, new BpTreeNode(obj), node);
 		}
-		else {
-			insert_leaf_split(key, obj, node);
+	}
+
+	public void delete(int key)
+	{
+		BpTreeNode node = search_node(key);
+
+		if (!node.is_key_included(key)) return;
+
+		if (node == this.root) {
+			delete_key_from_leaf(key, node);
+		} else if (node.has_enough_entry_leaf()) {
+			delete_key_enough(key, node);
+		} else {
+			delete_key_not_enough(key, node);
 		}
 	}
 }
