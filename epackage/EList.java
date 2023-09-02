@@ -3,19 +3,19 @@ package epackage;
 // EMEs-aware list
 public class EList {
 	ListNode head;
-	NodeManager nm;
+	ConnectionRecorder cr;
 
 	// EMEs can be occur here
 	public EList()
 	{
 		this.head = new ListNode();
-		this.nm = new NodeManager(this.head, null);
+		this.cr = new ConnectionRecorder(this.head, null);
 	}
 
 	private EList(EList original)
 	{
 		this.head = original.head;
-		this.nm = original.nm;
+		this.cr = original.cr;
 	}
 
 	public EList cloneInstance()
@@ -42,34 +42,34 @@ public class EList {
 		}
 	}
 
-	// add new entry to NodeManager
+	// add new entry to Recorder
 	void addEntry(ListNode n, ListNode n_next)
 	{
 		try
 		{
-			NodeManager newentry = new NodeManager(n, n_next);
-			newentry.next = this.nm.next;
-			this.nm.next = newentry;
+			ConnectionRecorder newentry = new ConnectionRecorder(n, n_next);
+			newentry.next = this.cr.next;
+			this.cr.next = newentry;
 		}
-		// ignore manager's error
+		// ignore Recorder's error
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			System.out.println("addEntry failed");
 		}
 	}
 
-	// delete entry of NodeManager
+	// delete entry of Recorder
 	void delEntry(ListNode n)
 	{
 		try
 		{
-			NodeManager m = this.nm;
+			ConnectionRecorder m = this.cr;
 
 			// preventry is the previous entry of argument node's entry.
 			// preventry.next will be deleted.
 			// prevnode_entry is the entry of previous node of argument node.
 			// preventry.next_ndaddr will be overwritten.
-			NodeManager preventry = null, prevnode_entry = null;
+			ConnectionRecorder preventry = null, prevnode_entry = null;
 
 			while (m.next != null) {
 				if (m.next.ndaddr == n) // found preventry
@@ -88,20 +88,20 @@ public class EList {
 				preventry.next = preventry.next.next;
 			}
 		}
-		// ignore manager's error
+		// ignore Recorder's error
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			System.out.println("delEntry failed");
 		}
 	}
 
-	// get previous node from manager
+	// get previous node from Recorder
 	// only used for node discard (skip)
 	ListNode getPrevNode(ListNode n)
 	{
 		try
 		{
-			NodeManager m = this.nm;
+			ConnectionRecorder m = this.cr;
 
 			if (n == this.head) return null; // previous node of head node doesn't exist
 
@@ -121,13 +121,13 @@ public class EList {
 		}
 	}
 
-	// get next node from manager
+	// get next node from Recorder
 	// only used for node discard (skip)
 	ListNode getNextNode(ListNode n)
 	{
 		try
 		{
-			NodeManager m = this.nm;
+			ConnectionRecorder m = this.cr;
 
 			while (m != null) {
 				if (m.ndaddr == n) // found
@@ -156,7 +156,7 @@ public class EList {
 			if (next != null) {
 				newhead.next = next;
 				this.head = newhead;
-				this.nm.ndaddr = this.head; // update entry
+				this.cr.ndaddr = this.head; // update entry
 			}
 		}
 		catch (ECCuncorrectableMemoryError eme)
@@ -187,7 +187,7 @@ public class EList {
 			newnode.next = this.head.next; // set next
 			this.head.next = newnode; // insert
 			addEntry(newnode, newnode.next);
-			this.nm.next_ndaddr = newnode;
+			this.cr.next_ndaddr = newnode;
 		}
 		// caught EME(s) during addNode
 		catch (ECCuncorrectableMemoryError eme)
@@ -198,7 +198,7 @@ public class EList {
 				addNode(obj, hash); // try again!
 			}
 			// if newnode is broken, then abort
-			// if NodeManager is broken, do nothing
+			// if Recorder is broken, do nothing
 		}
 	}
 

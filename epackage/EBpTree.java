@@ -9,18 +9,67 @@ public class EBpTree {
 		this.root = new BpTreeNode(key, obj);
 	}
 
+	// returns minimum key of the node
 	int minimum_key(BpTreeNode node)
 	{
-		if (node.is_leaf)
-			return node.keys[0];
-		else
-			return minimum_key(node.nodes[0]);
+		try
+		{
+			if (node.is_leaf)
+				return node.keys[0];
+			else
+				return minimum_key(node.nodes[0]); // recursive call
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - reading node.is_leaf
+			//   - reading array head addr (keys[0])
+			//   - reading array value (keys[i]) (->iaload)
+			//   - reading array head addr (nodes[0])
+		}
 	}
 
+	// search and return node that (may) contain key
+	// used to find not only node,
+	// but also left next leaf
+	BpTreeNode search_node(int key)
+	{
+		int i;
+
+		try
+		{
+			BpTreeNode node = this.root;
+
+			while (!node.is_leaf) {
+				for (i = 0; i < node.size; i++) {
+					if (node.keys[i] > key) break;
+				}
+
+				node = node.nodes[i];
+			}
+
+			return node;
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - reading addr of this.root
+			//   - reading node.is_leaf
+			//   - reading node.size
+			//   - reading array addr (keys[0])
+			//   - reading array value (keys[i])
+			//   - reading array addr (nodes[0])
+			//   - reading array value (nodes[i])
+		}
+	}
+
+	// can't use for leaf insertion
 	void insert_node_to_node(BpTreeNode addnode, BpTreeNode node)
 	{
 		int i, key, tmpkey;
 
+		try
+		{
 		if (node.size == BpTreeNode.degree || node.is_leaf) {
 			addnode.parent = node;
 			return;
@@ -59,10 +108,23 @@ public class EBpTree {
 		node.size++;
 
 		addnode.parent = node;
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - reading node.size or node.is_leaf
+			//   - writing addnode.parent
+			//   - reading/writing node.nodes[i] (value)
+			//   - reading array addr (nodes[0])
+			//   - reading array addr (keys[0])
+			//   - writing/reading array value (keys[i])
+		}
 	}
 
 	void delete_node_from_node(BpTreeNode delnode, BpTreeNode node)
 	{
+		try
+		{
 		if (node.size == 0) return;
 		if (node.nodes[0] == delnode) return;
 
@@ -79,10 +141,20 @@ public class EBpTree {
 		node.keys[i] = -1;
 		node.nodes[i+1] = null;
 		node.size--;
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - reading/writing node.size
+			//   - reading array addr (keys[0] or nodes[0])
+			//   - reading/writeing array value (keys[i] or nodes[i])
+		}
 	}
 
 	void delete_key_from_leaf(int key, BpTreeNode node)
 	{
+		try
+		{
 		if (node.size == 0 || !node.is_leaf) return;
 
 		int i;
@@ -96,27 +168,22 @@ public class EBpTree {
 		node.keys[i] = -1;
 		node.nodes[i] = null;
 		node.size--;
-	}
-
-	BpTreeNode search_node(int key)
-	{
-		int i;
-		BpTreeNode node = this.root;
-
-		while (!node.is_leaf) {
-			for (i = 0; i < node.size; i++) {
-				if (node.keys[i] > key) break;
-			}
-
-			node = node.nodes[i];
 		}
-
-		return node;
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - reading node.is_leaf
+			//   - reading/writing node.size
+			//   - reading array addr (keys[0] or nodes[0])
+			//   - reading/writing array value (keys[i] or nodes[i])
+		}
 	}
 
 	// objnode: node that contains only object information
 	void insert_key_to_leaf(int key, BpTreeNode objnode, BpTreeNode node)
 	{
+		try
+		{
 		if (node.size == BpTreeNode.degree && !node.is_leaf) return;
 
 		int i;
@@ -128,11 +195,19 @@ public class EBpTree {
 		node.keys[i] = key;
 		node.nodes[i] = objnode;
 		node.size++;
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			// the same place to delete_key_from_leaf
+		}
 	}
 
 	// split node (right is node's child)
 	void insert_node_split(BpTreeNode right, BpTreeNode node)
 	{
+		try
+		{
 		BpTreeNode left_node, right_node;
 		int right_minkey = minimum_key(right);
 		int d = BpTreeNode.degree;
@@ -157,6 +232,15 @@ public class EBpTree {
 			insert_node_to_node(right, left_node);
 
 		insert_nodes_to_node(left_node, right_node, left_node.parent);
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			// EMEs can occur at
+			//   - allocating new BpTreeNode (write access)
+			//   - writing new node's parent
+			//   - reading node.parent, node.size
+			//   - reading array addr (nodes[0])
+		}
 	}
 
 	void insert_nodes_to_node(BpTreeNode left, BpTreeNode right, BpTreeNode node)
@@ -255,7 +339,7 @@ public class EBpTree {
 
 	void balance_tree(BpTreeNode node)
 	{
-		if (node == this.root) {
+		if (node.parent == null) { // root node
 			if (node.nodes[1] != null) { // two or more sub-trees
 				// do nothing
 			} else { // only one sub-tree
@@ -305,18 +389,11 @@ public class EBpTree {
 				merge_nodes(left, node);
 				delete_node_from_node(node, node.parent);
 				balance_tree(node.parent);
-				return;
 			} else if (right != null) {
 				// implies node is leftmost child of node.parent
-				merge_nodes(right, node);
-				for (i = 0; i < node.parent.size; i++) {
-					node.parent.keys[i] = node.parent.keys[i+1];
-					node.parent.nodes[i] = node.parent.nodes[i+1];
-				}
-				node.parent.nodes[i] = null;
-				node.parent.size--;
+				merge_nodes(node, right);
+				delete_node_from_node(right, node.parent);
 				balance_tree(node.parent);
-				return;
 			}
 		}
 	}
@@ -325,8 +402,9 @@ public class EBpTree {
 	// leaf_b will be removed
 	void merge_leaves(BpTreeNode leaf_a, BpTreeNode leaf_b)
 	{
-		if (leaf_a == null || leaf_a.has_enough_entry_leaf()) return;
+		if (leaf_a == null || leaf_b == null) return;
 		if (leaf_a.parent != leaf_b.parent) return;
+		if (leaf_a.size + leaf_b.size > BpTreeNode.degree) return;
 
 		int i;
 		for (i = 0; i < leaf_b.size; i++) {
@@ -431,5 +509,16 @@ public class EBpTree {
 		} else {
 			delete_key_not_enough(key, node);
 		}
+	}
+
+	public Object get_object(int key)
+	{
+		BpTreeNode node = search_node(key);
+		if (node == null) return null;
+
+		for (int i = 0; i < node.size; i++) {
+			if (node.keys[i] == key) return node.nodes[i].obj;
+		}
+		return null;
 	}
 }
