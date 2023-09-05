@@ -23,6 +23,21 @@ public class EList {
 		return new EList(this);
 	}
 
+	// check if list is broken
+	// (i.e., can read/write head addr)
+	boolean is_brokenList(EList lst)
+	{
+		try
+		{
+			lst.head = lst.head;
+			return false;
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			return true;
+		}
+	}
+
 	// check if node is broken
 	// (i.e., can read/write)
 	boolean is_brokenNode(ListNode node)
