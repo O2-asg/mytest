@@ -52,20 +52,4 @@ class BpTreeNode {
 
 		return false;
 	}
-
-	// check if a leaf has enough entry (key) to delete
-	boolean has_enough_entry_leaf()
-	{
-		if (this.is_leaf && (this.size > (degree+1)/2))
-			return true;
-		else return false;
-	}
-
-	// check if a node (not leaf) has enough entry to delete
-	boolean has_enough_entry_node()
-	{
-		if (!this.is_leaf && this.nodes[(degree+1)/2] != null)
-			return true;
-		else return false;
-	}
 }

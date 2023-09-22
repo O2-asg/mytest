@@ -1,9 +1,9 @@
 class TekitouTest {
 	public static void main(String[] args)
 	{
-		Object o = new Object();
-		Object tmp = o.clone();
-
-		System.out.printf("original: %x, clone: %x\n", o.hashCode(), tmp.hashCode());
+		Object arr_1[] = new Object[2];
+		Object arr_2[] = new Object[2];
+		arr_1[0] = new Object();
+		arr_2[1] = arr_1[1];
 	}
 }
