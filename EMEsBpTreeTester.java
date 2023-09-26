@@ -29,7 +29,22 @@ class EMEsBpTreeTester {
 		t.insert(15, null);
 		t.insert(17, null);
 
+		t.delete(15);
+		t.delete(17);
+		t.delete(11);
+		t.delete(25);
+		t.delete(35);
+		t.delete(33);
+		t.delete(28);
+		t.delete(22);
+		t.delete(37);
+		t.delete(38);
+		t.delete(1);
+		t.delete(2);
+		t.delete(14);
+		t.delete(41);
+
 		t.p();
-//		t.treeinfo_p();
+		t.treeinfo_p();
 	}
 }
