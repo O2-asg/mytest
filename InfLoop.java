@@ -1,7 +1,14 @@
 class InfLoop {
 	public static void main(String[] args)
 	{
-		while (true)
-			;
+		try
+		{
+			while (true)
+				;
+		}
+		catch (ECCuncorrectableMemoryException eme)
+		{
+			System.out.println("caught EME when infinite looping");
+		}
 	}
 }
