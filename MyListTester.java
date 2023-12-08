@@ -1,9 +1,9 @@
-import epackage.EList;
+import mypackage.MyList;
 
-public class EMEsListTester {
+public class MyListTester {
 	public static void main(String[] args)
 	{
-		EList lst = new EList();
+		MyList lst = new MyList();
 		Object o;
 		int h = 0;
 
@@ -14,7 +14,7 @@ public class EMEsListTester {
 		}
 
 		lst.showList();
-		System.out.println("-----------------------------------");
+		System.out.println("----------------------");
 		lst.delNode(h);
 		lst.showList();
 	}

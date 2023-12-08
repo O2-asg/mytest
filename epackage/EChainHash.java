@@ -6,12 +6,13 @@ public class EChainHash {
 	// should be a prime number?
 	public static final int BUCKET_SIZE = 1021;
 
-	// EMEs might occur when accessing tbl[idx]
-	// two tables must be at other places
+	// EMEs occur when accessing tbl[idx]
+	// two arrays should be different object (do not copy like "tbl = backup_tbl" !)
+	// uses the same EList.head and EList.cr
 	EList tbl[];
-	EList backup_tbl[];
+	EList backup_tbl[]; // m-list
 
-	// EMEs can be occur here
+	// EMEs can occur here
 	public EChainHash()
 	{
 		this.tbl = new EList[BUCKET_SIZE];
@@ -72,12 +73,18 @@ public class EChainHash {
 			}
 
 			this.tbl[idx].addNode(obj, hashcode);
+
+			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
+				this.backup_tbl[idx].head = this.tbl[idx].head;
+			}
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
-				this.backup_tbl = reallocate_table(this.backup_tbl);
+				if (this.tbl == null) {
+					System.out.println("fatal: backup table is broken");
+				}
 			}
 		}
 	}
@@ -93,12 +100,18 @@ public class EChainHash {
 				return;
 
 			this.tbl[idx].delNode(hashcode);
+			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
+				this.backup_tbl[idx].head = this.tbl[idx].head;
+			}
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
-				this.backup_tbl = reallocate_table(this.backup_tbl);
+				if (this.tbl == null) {
+					System.out.println("fatal: backup table is broken");
+				}
+
 			}
 		}
 	}
@@ -113,13 +126,18 @@ public class EChainHash {
 			if (this.tbl[idx] == null)
 				return null;
 
-			return this.tbl[idx].getObject(hashcode);
+			Object ret = this.tbl[idx].getObject(hashcode);
+			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
+				this.backup_tbl[idx].head = this.tbl[idx].head;
+			}
+
+			return ret;
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
-				this.backup_tbl = reallocate_table(this.backup_tbl);
+				if (this.tbl == null) return null;
 				return hash_get(hashcode); // try again!
 			}
 
