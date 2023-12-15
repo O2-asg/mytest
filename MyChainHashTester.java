@@ -3,26 +3,27 @@ import mypackage.MyChainHash;
 public class MyChainHashTester {
 	public static void main(String[] args)
 	{
-		int NUM = 10;
+		int NUM = 100000;
+		int i;
+		int h[] = new int[NUM];
 
 		MyChainHash ch = new MyChainHash();
-		int hashholder[] = new int[NUM];
 		Object o[] = new Object[NUM];
+		long start, end;
+		double million = 1000000.0;
 
-		for (int i = 0; i < NUM; i++) {
+		for (i = 0; i < NUM; i++) {
 			o[i] = new Object();
-			hashholder[i] = o[i].hashCode();
-			ch.hash_store(o[i], o[i].hashCode());
+			h[i] = o[i].hashCode();
+			ch.hash_store(o[i], h[i]);
 		}
 
-
-		int cnt = 0;
-		for (int i = 0; i < NUM; i++) {
-			if (ch.hash_get(hashholder[i]) == o[i])
-			cnt++;
+		start = System.nanoTime();
+		for (i = 0; i < NUM; i++) {
+			ch.hash_delete(h[i]);
 		}
+		end = System.nanoTime();
 
-		if (cnt == NUM) System.out.println("test passed");
-		else System.out.println("test failed: " + cnt + " is OK");
+		System.out.println((end-start)/million); // ms
 	}
 }

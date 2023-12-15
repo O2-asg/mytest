@@ -3,48 +3,30 @@ import epackage.EBpTree;
 class EMEsBpTreeTester {
 	public static void main(String[] args)
 	{
-/*		Object o = new Object();
-		EBpTree t = new EBpTree(o.hashCode(), o);
+		int num = 50000;
+		int i;
+		int h[] = new int[num];
+		long start, end;
+		double million = 1000000.0;
+		Object o[] = new Object[num];
 
-		for (int i = 0; i < 10; i++) {
-			o = new Object();
-			t.insert(o.hashCode(), o);
-		}*/
+		for (i = 0; i < num; i++) {
+			o[i] = new Object();
+			h[i] = o[i].hashCode();
+		}
 
-		EBpTree t = new EBpTree(37, null);
-		t.insert(33, null);
-		t.insert(28, null);
-		t.insert(41, null);
-		t.insert(1, null);
-		t.insert(22, null);
-		t.insert(35, null);
-		t.insert(38, null);
-		t.insert(42, null);
-		t.insert(11, null);
-		t.insert(14, null);
-		t.insert(25, null);
-		t.insert(46, null);
-		t.insert(2, null);
-		t.insert(47, null);
-		t.insert(15, null);
-		t.insert(17, null);
+		EBpTree t = new EBpTree(h[0], o[0]);
 
-		t.delete(15);
-		t.delete(17);
-		t.delete(11);
-		t.delete(25);
-		t.delete(35);
-		t.delete(33);
-		t.delete(28);
-		t.delete(22);
-		t.delete(37);
-		t.delete(38);
-		t.delete(1);
-		t.delete(2);
-		t.delete(14);
-		t.delete(41);
+		for (i = 1; i < num; i++) {
+			t.insert(h[i], o[i]);
+		}
 
-		t.p();
-		t.treeinfo_p();
+		start = System.nanoTime();
+		for (i = 0; i < num; i++) {
+			t.delete(h[i]);
+		}
+		end = System.nanoTime();
+
+		System.out.println((end-start)/million);
 	}
 }

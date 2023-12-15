@@ -1,12 +1,13 @@
 class TekitouTest {
 	public static void main(String[] args)
 	{
-//		throw new NullPointerException();
-//		throw new ECCuncorrectableMemoryException();
-		int i = 0;
-		while(true) {
-			i++;
-			if (i > 10) i = 0;
-		}
+		long start = System.nanoTime();
+		int i;
+		double nanotoone = 1000000000.0;
+
+		for (i = 0; i < 100000; i++)
+			;
+		long end = System.nanoTime();
+		System.out.println("time is "+(end-start)/nanotoone);
 	}
 }

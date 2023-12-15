@@ -283,7 +283,7 @@ public class MyBpTree {
 				if (right.nodes[(BpTreeNode.degree+1)/2] != null) { // has enough entries
 					insert_node_to_node(right.nodes[0], node);
 					for (i = 0; i < right.size; i++) {
-						right.keys[i] = right.keys[i+1];
+						if (i != (right.size-1)) right.keys[i] = right.keys[i+1];
 						right.nodes[i] = right.nodes[i+1];
 					}
 					right.nodes[i] = null;
