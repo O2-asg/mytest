@@ -1,16 +1,16 @@
-import mypackage.MyChainHash;
+import epackage.EChainHash_v2;
 
-public class MyChainHashTester {
+public class EMEsChainHash_v2Tester {
 	public static void main(String[] args)
 	{
 		int NUM = 1000000;
 		int i;
 		int h[] = new int[NUM];
-
-		MyChainHash ch = new MyChainHash();
-		Object o[] = new Object[NUM];
-		long start, end;
+//		long start, end;
 		double million = 1000000.0;
+
+		EChainHash_v2 ch = new EChainHash_v2();
+		Object o[] = new Object[NUM];
 
 		for (i = 0; i < NUM; i++) {
 			o[i] = new Object();

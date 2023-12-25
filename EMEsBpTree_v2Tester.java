@@ -1,13 +1,13 @@
-import mypackage.MyBpTree;
+import epackage.EBpTree_v2;
 
-class MyBpTreeTester {
+class EMEsBpTree_v2Tester {
 	public static void main(String[] args)
 	{
 		int num = 100000;
 		int i;
+		int h[] = new int[num];
 		long start, end;
 		double million = 1000000.0;
-		int h[] = new int[num];
 		Object o[] = new Object[num];
 
 		for (i = 0; i < num; i++) {
@@ -15,7 +15,7 @@ class MyBpTreeTester {
 			h[i] = o[i].hashCode();
 		}
 
-		MyBpTree t = new MyBpTree(h[0], o[0]);
+		EBpTree_v2 t = new EBpTree_v2(h[0], o[0]);
 
 		for (i = 1; i < num; i++) {
 			t.insert(h[i], o[i]);

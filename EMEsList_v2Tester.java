@@ -1,9 +1,8 @@
-import mypackage.MyList;
+import epackage.EList_v2;
 
-public class MyListTester {
+public class EMEsList_v2Tester {
 	public static void main(String[] args)
 	{
-		MyList lst = new MyList();
 		int num = 1000;
 		Object o[] = new Object[num];
 		double million = 1000000;
@@ -15,12 +14,14 @@ public class MyListTester {
 			h[i] = o[i].hashCode();
 		}
 
-		for (int i = 0; i < num; i++) {
+		EList_v2 lst = new EList_v2(o[0], h[0]);
+
+		for (int i = 1; i < num; i++) {
 			lst.addNode(o[i], h[i]);
 		}
 
 		start = System.nanoTime();
-		for (int i = 0; i < num; i++) {
+		for (int i = 1; i < num; i++) {
 			lst.delNode(h[i]);
 		}
 		end = System.nanoTime();

@@ -1,10 +1,9 @@
-import mypackage.MyList;
+import epackage.EList_v2_recover;
 
-public class MyListTester {
+public class EMEsList_v2_recoverTester {
 	public static void main(String[] args)
 	{
-		MyList lst = new MyList();
-		int num = 1000;
+		int num = 10000;
 		Object o[] = new Object[num];
 		double million = 1000000;
 		long start, end;
@@ -15,12 +14,14 @@ public class MyListTester {
 			h[i] = o[i].hashCode();
 		}
 
-		for (int i = 0; i < num; i++) {
+		EList_v2_recover lst = new EList_v2_recover(o[0], h[0]);
+
+		for (int i = 1; i < num; i++) {
 			lst.addNode(o[i], h[i]);
 		}
 
 		start = System.nanoTime();
-		for (int i = 0; i < num; i++) {
+		for (int i = 1; i < num; i++) {
 			lst.delNode(h[i]);
 		}
 		end = System.nanoTime();

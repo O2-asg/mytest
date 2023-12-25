@@ -4,7 +4,7 @@ public class EMEsListTester {
 	public static void main(String[] args)
 	{
 		EList lst = new EList();
-		int num = 10000;
+		int num = 900000;
 		Object o[] = new Object[num];
 		double million = 1000000;
 		long start, end;
@@ -13,12 +13,11 @@ public class EMEsListTester {
 		for (int i = 0; i < num; i++) {
 			o[i] = new Object();
 			h[i] = o[i].hashCode();
-			lst.addNode(o[i], h[i]);
 		}
 
 		start = System.nanoTime();
 		for (int i = 0; i < num; i++) {
-			lst.delNode(h[i]);
+			lst.addNode(o[i], h[i]);
 		}
 		end = System.nanoTime();
 
