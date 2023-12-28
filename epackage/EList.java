@@ -3,19 +3,19 @@ package epackage;
 // EMEs-aware list
 public class EList {
 	ListNode head;
-	ConnectionRecorder cr;
+	ListMRec mr;
 
 	// EMEs can occur here
-	public EList()
+	public EList(int key, Object value)
 	{
-		this.head = new ListNode();
-		this.cr = new ConnectionRecorder(this.head, null);
+		this.head = new ListNode(key, value);
+		this.mr = new ListMRec(this.head.hashCode());
 	}
 
 	private EList(EList original)
 	{
 		this.head = original.head;
-		this.cr = original.cr;
+		this.mr = original.mr;
 	}
 
 	public EList cloneInstance()
@@ -23,22 +23,7 @@ public class EList {
 		return new EList(this);
 	}
 
-	// check if list is broken
-	// (i.e., can read/write head addr)
-	boolean is_brokenList(EList lst)
-	{
-		try
-		{
-			lst.head = lst.head;
-			return false;
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			return true;
-		}
-	}
-
-	// check if node is broken
+	// check ListNode (broken or not)
 	// (i.e., can read/write)
 	boolean is_brokenNode(ListNode node)
 	{
@@ -47,268 +32,185 @@ public class EList {
 		try
 		{
 			// read/write check
+			node.key = node.key;
 			node.obj = node.obj;
-			node.hash = node.hash;
 			node.next = node.next;
 
-			return false; // not broken node
+			return false; // not broken
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
-			return true; // broken node
+			return true; // broken
 		}
 	}
 
-	// add new entry to Recorder
-	void addEntry(ListNode n, ListNode n_next)
+	// add new record to Recorder
+	void add_rec(ListNode node, ListNode nextnode)
 	{
+		if (node == null) return; // error
+
 		try
 		{
-			ConnectionRecorder newentry = new ConnectionRecorder(n, n_next);
-			newentry.next = this.cr.next;
-			this.cr.next = newentry;
-			this.cr.next_ndaddr = n; // always add node to head.next
+			this.mr.add_rec(node, nextnode);
 		}
 		// ignore Recorder's error
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
-			System.out.println("addEntry failed");
+			System.out.println("add_rec failed: broken m-rec");
 		}
 	}
 
-	// delete Recorder of target
-	// also rewrites Recorder of previous node of target
-	void delEntry(ListNode target)
+	// delete record of target
+	void remove_rec(ListNode target)
 	{
-		if (target == this.head) return;
+		if (target == null) return;
 
 		try
 		{
-			ConnectionRecorder m = this.cr;
-
-			// targetCR is ConnectionRecorder of target. -> to be skipped
-			// prevCR is ConnectionRecordee of previous node of target. ->
-			// prevCR.next_ndaddr will be overwritten to targetCR.next_ndaddr.
-			ConnectionRecorder targetCR = null, prevCR = null;
-
-			while (m.next != null) {
-				if (m.next.ndaddr == target) { // m.next is ConnectionRecorder of target
-					targetCR = m.next;
-					m.next = targetCR.next; // skip
-					continue;
-				}
-				if (m.next.next_ndaddr == target) // m.next is CR of previous node of target
-					prevCR = m.next;
-				if (targetCR != null && prevCR != null) {
-					// overwrite prevCR's next_ndaddr
-					prevCR.next_ndaddr = targetCR.next_ndaddr;
-					break;
-				}
-				m = m.next;
-			}
+			this.mr.remove_rec(target);
 		}
 		// ignore Recorder's error
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
-			System.out.println("delEntry failed");
+			System.out.println("remove_rec failed: broken m-rec");
 		}
 	}
 
-	// get previous node from Recorder
-	// only used for node discard (skip)
-	ListNode getPrevNode(ListNode n) /* #UNUSED */
+	void update_rec(ListNode node, ListNode nextnode)
 	{
 		try
 		{
-			ConnectionRecorder m = this.cr;
-
-			if (n == this.head) return null; // previous node of head node doesn't exist
-
-			while (m != null) {
-				if (m.next_ndaddr == n) // found
-					return m.ndaddr;
-				m = m.next;
-			}
-
-			return null; // not found
-
+			this.mr.update_rec(node, nextnode);
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
-			System.out.println("getPrevNode failed");
-			return null;
+			System.out.println("update_rec failed: broken m-rec");
 		}
 	}
 
-	// get next node from Recorder
-	// only used for node discard (skip)
-	ListNode getNextNode(ListNode n)
+	// discard broken EList.head
+	// since head is broken, we can't access this.head.next
+	void discardHead()
 	{
+		ListMRecNode mrn = null;
 		try
 		{
-			ConnectionRecorder m = this.cr;
-
-			while (m != null) {
-				if (m.ndaddr == n) // found
-					return m.next_ndaddr;
-				m = m.next;
-			}
-
-			return null; // not found
+			// remove and get record of head
+			mrn = this.mr.remove_and_get_rec(this.head);
+			this.head = mrn.nextnode;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
-			System.out.println("getNextNode failed");
-			return null;
-		}
-	}
-
-	// replace broken head node of list
-	// since head is broken, accessing head.next is dangerous
-	void replaceHead()
-	{
-		ListNode newhead = null, next = null;
-		try
-		{
-			newhead = new ListNode();
-			next = this.cr.next_ndaddr; // avoid accessing head.next
-
-			if (next != null) {
-				newhead.next = next;
-				this.head = newhead;
-				this.cr.ndaddr = this.head; // update entry
-			}
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			if (is_brokenNode(newhead))
-				replaceHead(); // try again!
-		}
-	}
-
-	// skip broken node and
-	// delete entry of broken node
-	void skip_brokenNode(ListNode broken_node) /* #UNUSED */
-	{
-		ListNode prevnode = getPrevNode(broken_node);
-		ListNode nextnode = getNextNode(broken_node);
-		if (prevnode != null && nextnode != null) {
-			prevnode.next = nextnode; // skip
-			delEntry(broken_node); // delete entry
+			System.out.println("unknown error");
 		}
 	}
 
 	// internal deletion function
-	// get node.next from ConnectionRecorder
-	void delete_node_from_list(ListNode target)
+	// get node.next from m-rec
+	void discardNode(ListNode target)
 	{
 		if (target == this.head) {
-			replaceHead();
+			discardHead();
 			return;
 		}
 
 		ListNode n = this.head;
-		ListNode tnext = null;
+		ListMRecNode mrn = null;
 
 		try
 		{
 			while (n != null) {
 				if (n.next == target) {
-					tnext = getNextNode(target);
-					if (tnext != null)
-						n.next = tnext;
+					mrn = this.mr.remove_and_get_rec(target);
+					update_rec(n, mrn.nextnode);
+					n.next = mrn.nextnode;
 					break;
 				}
 				n = n.next;
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(n)) { // found broken node before target
-				delete_node_from_list(n); // recursive call
-				delete_node_from_list(target); // try again!
+				discardNode(n); // recursive call
+				discardNode(target); // try again!
 			} else {  } // ignore
 
 			return;
 		}
-
-		// m-list update
-		// callee handles EME
-		delEntry(target);
 	}
 
 	// add node to EMEs-aware list
-	public void addNode(Object obj, int hash)
+	public void addNode(int key, Object value)
 	{
-		ListNode newnode = null, head_next = null;
+		ListNode newnode = null, oldhead = this.head;
 
 		try
 		{
 			// normal operation
-			newnode = new ListNode(obj, hash);
-			head_next = this.head.next;
+			newnode = new ListNode(key, value);
 
-			newnode.next = head_next; // set next
-			this.head.next = newnode; // insert
+			newnode.next = oldhead; // set next to old head
+			this.head = newnode; // set head to newnode
+
+			// record newly allocated ListNode
+			add_rec(newnode, oldhead);
 		}
-		catch (ECCuncorrectableMemoryError eme)	// at newnode or this.head
+		catch (ECCuncorrectableMemoryException eme)	// at newnode
 		{
-			// broken head
-			if (is_brokenNode(this.head)) {
-				replaceHead();
-				addNode(obj, hash); // try again!
-				return;
-			}
 			// broken newnode
 			if (is_brokenNode(newnode)) {
-				addNode(obj, hash); // try again!
+				addNode(key, value); // try again!
 				return;
 			}
 		}
-
-		// update m-list
-		// callee handles EME
-		addEntry(newnode, head_next);
 	}
 
 	// delete node from EMEs-aware list
-	// key is hashCode
-	public void delNode(int hash)
+	public void delNode(int key)
 	{
 		ListNode n = this.head, prev = this.head;
 
 		try
 		{
 			// normal operation
+			if (this.head.key == key) {
+				this.head = this.head.next;
+				remove_rec(n);
+				return;
+			}
+
 			n = n.next;
-			while (n != null && n.hash != hash) {
+			while (n != null) {
+				if (n.key == key) {
+					break;
+				}
 				prev = n;
 				n = n.next;
 			}
 
 			if (n != null) {
 				prev.next = n.next;
+				remove_rec(n);
+				update_rec(prev, n.next);
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme) // at this.head or any other node
+		catch (ECCuncorrectableMemoryException eme) // at this.head or any other node
 		{
 			// error when R/W this.head.next
 			if (is_brokenNode(this.head)) {
-				replaceHead();
-				delNode(hash); // try again!
+				discardHead();
+				delNode(key); // try again!
 			} else if (is_brokenNode(n)) { // error with node n
-				delete_node_from_list(n);
-				delNode(hash); // try again!
+				discardNode(n);
+				delNode(key); // try again!
 			} else if (is_brokenNode(prev)) { // error when writing to prev.next
-				delNode(hash); // try again! this time EME is at node n.
-			} else { /* ignore other EME */ }
+				discardNode(prev);
+				delNode(key); // try again!
+			} else { /* ignore other EMEs */ }
 
 			return;
 		}
-
-		// m-list update
-		// callee handles EME
-		delEntry(n);
 	}
 
 	// show EMEs-aware list
@@ -318,19 +220,18 @@ public class EList {
 		try
 		{
 			// normal operation
-			n = n.next; // skip head node
 			while (n != null) {
-				System.out.printf("Object %s, hashCode is %x\n", n.obj.toString(), n.hash);
+				System.out.printf("Object %s, key is %d\n", n.obj.toString(), n.key);
 				n = n.next;
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme) // at this.head or any other node
+		catch (ECCuncorrectableMemoryException eme) // at this.head or any other node
 		{
 			if (is_brokenNode(this.head)) { // error when reading this.head.next
-				replaceHead();
+				discardHead();
 				showList(); // try again!
 			} else if (is_brokenNode(n)) {
-				delete_node_from_list(n);
+				discardNode(n);
 				System.out.println("showList() aborted: caught EME");
 				System.out.println("sorry, some information has lost");
 			} else { /* ignore other EME */ }
@@ -340,29 +241,28 @@ public class EList {
 	}
 
 	// search and get object from given hashcode
-	public Object getObject(int hash)
+	public Object getObject(int key)
 	{
 		ListNode n = this.head;
 
 		try
 		{
 			// normal operation
-			n = n.next;
 			while (n != null) {
-				if (n.hash == hash)
+				if (n.key == key)
 					return n.obj;
 				n = n.next;
 			}
 
 			return null;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(this.head)) {
-				replaceHead();
-				return getObject(hash); // try again!
+				discardHead();
+				return getObject(key); // try again!
 			} else if (is_brokenNode(n)) {
-				delete_node_from_list(n);
+				discardNode(n);
 				return null;
 			} else { /* ignore other EME */ }
 

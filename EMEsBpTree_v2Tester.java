@@ -17,10 +17,12 @@ class EMEsBpTree_v2Tester {
 
 		EBpTree_v2 t = new EBpTree_v2(h[0], o[0]);
 
+//		start = System.nanoTime();
 		for (i = 1; i < num; i++) {
 			t.insert(h[i], o[i]);
 		}
-
+//		end = System.nanoTime();
+System.out.println("-----B+-tree GC-----");
 		start = System.nanoTime();
 		for (i = 0; i < num; i++) {
 			t.delete(h[i]);

@@ -3,23 +3,41 @@ package epackage;
 class ListMRecRList {
 	ListMRecRNode head;
 
-	ListMRecRList(ListNode nextnode, Object obj, int key, int hash)
+	ListMRecRList(int hash, ListNode nextnode, int key, Object obj)
 	{
-		this.head = new ListMRecRNode(nextnode, obj, key, hash);
+		this.head = new ListMRecRNode(hash, nextnode, key, obj);
 	}
 
-	void addNode(ListNode nextnode, Object obj, int key, int hash)
+	void addNode(int hash, ListNode nextnode, int key, Object obj)
 	{
-		ListMRecRNode newnode = new ListMRecRNode(nextnode, obj, key, hash);
+		ListMRecRNode newnode = new ListMRecRNode(hash, nextnode, key, obj);
 
 		newnode.next = this.head;
 		this.head = newnode;
 	}
 
+	void delNode(int hash)
+	{
+		if (this.head.hash == hash) { // this.head holds the info
+			this.head = this.head.next;
+			return;
+		}
+
+		ListMRecRNode n = this.head;
+
+		while (n.next != null) {
+			if (n.next.hash == hash) { // find the info
+				n.next = n.next.next; // delete record
+				return;
+			}
+			n = n.next;
+		}
+	}
+
 	// deletes record of broken (or to be deleted) ListNode and
 	// returns brokenNode.next
 	// hash is brokenNode.hashCode()
-	ListMRecRNode delNode(int hash)
+	ListMRecRNode delAndRetNode(int hash)
 	{
 		ListMRecRNode ret = null;
 

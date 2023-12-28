@@ -29,7 +29,7 @@ public class EChainHash {
 
 			return false; // not broken
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			return true; // broken
 		}
@@ -51,7 +51,7 @@ public class EChainHash {
 
 			return ret;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenArray(lst)) return null;
 			if (is_brokenArray(ret)) return reallocate_table(lst); // try again!
@@ -61,24 +61,25 @@ public class EChainHash {
 	}
 
 	// store new key and value
-	public void hash_store(Object obj, int hashcode)
+	public void hash_store(int key, Object value)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		try
 		{
 			if (this.tbl[idx] == null) {
-				this.tbl[idx] = new EList();
+				this.tbl[idx] = new EList(key, value);
 				this.backup_tbl[idx] = this.tbl[idx].cloneInstance();
+				return;
 			}
 
-			this.tbl[idx].addNode(obj, hashcode);
+			this.tbl[idx].addNode(key, value);
 
 			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
 				this.backup_tbl[idx].head = this.tbl[idx].head;
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
@@ -90,21 +91,21 @@ public class EChainHash {
 	}
 
 	// delete key and value using key
-	public void hash_delete(int hashcode)
+	public void hash_delete(int key)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		try
 		{
 			if (this.tbl[idx] == null)
 				return;
 
-			this.tbl[idx].delNode(hashcode);
+			this.tbl[idx].delNode(key);
 			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
 				this.backup_tbl[idx].head = this.tbl[idx].head;
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
@@ -117,28 +118,28 @@ public class EChainHash {
 	}
 
 	// get object from hashcode (key)
-	public Object hash_get(int hashcode)
+	public Object hash_get(int key)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		try
 		{
 			if (this.tbl[idx] == null)
 				return null;
 
-			Object ret = this.tbl[idx].getObject(hashcode);
+			Object ret = this.tbl[idx].getObject(key);
 			if (this.tbl[idx].head != this.backup_tbl[idx].head) { // head replaced
 				this.backup_tbl[idx].head = this.tbl[idx].head;
 			}
 
 			return ret;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenArray(this.tbl)) {
 				this.tbl = reallocate_table(this.backup_tbl);
 				if (this.tbl == null) return null;
-				return hash_get(hashcode); // try again!
+				return hash_get(key); // try again!
 			}
 
 			return null;

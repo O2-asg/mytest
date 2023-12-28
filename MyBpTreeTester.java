@@ -16,16 +16,18 @@ class MyBpTreeTester {
 		}
 
 		MyBpTree t = new MyBpTree(h[0], o[0]);
-
+System.out.println("-----B+-tree GC-----");
+		start = System.nanoTime();
 		for (i = 1; i < num; i++) {
 			t.insert(h[i], o[i]);
 		}
+		end = System.nanoTime();
 
-		start = System.nanoTime();
+/*		start = System.nanoTime();
 		for (i = 0; i < num; i++) {
 			t.delete(h[i]);
 		}
-		end = System.nanoTime();
+		end = System.nanoTime();*/
 
 		System.out.println((end-start)/million);
 	}

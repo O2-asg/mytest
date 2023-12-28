@@ -1,21 +1,16 @@
 package epackage;
 
 // EMEs-aware B+-tree
-// btni holds a node's addr, child(ren) addr, and leaf or not
-
-// when reading root (e.g., node = this.root), EMEs can occur
-// this causes fail stop because instance is broken
-// (memory addr that stores root reference is broken)
 public class EBpTree {
 	BpTreeNode root;
-	BpTreeNodeInfo btni;
+	BpTreeMRec mr;
 
-	// EMEs can be occur here
+	// EMEs can occur here
 	public EBpTree(int key, Object obj)
 	{
 		this.root = new BpTreeNode(key, obj);
-		this.btni = new BpTreeNodeInfo(this.root, 1, true); // (node, size, is_leaf)
-		this.btni.nodes[0] = this.root.nodes[0];
+		this.mr = new BpTreeMRec(this.root.hashCode());
+		this.mr.update_children_rec(this.root);
 	}
 
 	// check node (broken or not)
@@ -33,193 +28,64 @@ public class EBpTree {
 			node.is_leaf = node.is_leaf;
 			return false;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			return true;
 		}
 	}
 
-	// fetch and return nodeinfo(M-list's node)
-	// nodeinfo(M-list) is LRU structure
-	BpTreeNodeInfo search_NodeInfo(BpTreeNode node)
-	{
-		BpTreeNodeInfo ni = this.btni;
-
-		try
-		{
-			if (ni.ownaddr == node) return ni;
-
-			while (ni.next != null) { // LRU
-				if (ni.next.ownaddr == node) { // found
-					BpTreeNodeInfo target = ni.next;
-					ni.next = target.next;
-					target.next = this.btni;
-					this.btni = target;
-					return target;
-				}
-				ni = ni.next;
-			}
-			return null; // not found
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			// ignore btni's error
-			return null;
-		}
-	}
-
-	// update parent information only
-	void update_parentInfo(BpTreeNode node)
-	{
-		BpTreeNodeInfo ni = search_NodeInfo(node);
-		try
-		{
-			if (ni != null)
-				ni.parent = node.parent;
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			System.out.println("fatal error: EMEs");
-		}
-	}
-
-	// replace a node using nodeinfo
+	// replace a node using record
 	BpTreeNode replaceNode(BpTreeNode node)
 	{
 		int i;
-		BpTreeNodeInfo ni = search_NodeInfo(node);
+		BpTreeMRecNode mrn = this.mr.get_rec(node);
 		BpTreeNode newnode = null;
 
 		try
 		{
-			if (ni != null) {
+			if (mrn != null) {
 				// common operation (leaf or mid-node or root)
 				newnode = new BpTreeNode();
-				BpTreeNodeInfo parent_ni = search_NodeInfo(ni.parent);
-				newnode.size = ni.size;
-				newnode.parent = ni.parent;
-				newnode.is_leaf = ni.is_leaf;
+				BpTreeMRecNode parent_mrn = this.mr.get_rec(mrn.parent);
+				newnode.size = mrn.size;
+				newnode.parent = mrn.parent;
+				newnode.is_leaf = mrn.is_leaf;
 
-				if (ni.parent != null) { // non root
-					for (i = 0; i <= parent_ni.size; i++) {
-						if (parent_ni.nodes[i] == node) {
-							ni.parent.nodes[i] = newnode;
-							if (parent_ni != null) parent_ni.nodes[i] = newnode;
+				if (mrn.is_leaf) { // leaf
+					for (i = 0; i < mrn.size; i++) {
+						newnode.nodes[i] = mrn.nodes[i];
+						newnode.keys[i] = mrn.nodes[i].size; // key is stored in this entry
+					}
+					newnode.nodes[BpTreeNode.degree] = mrn.nodes[BpTreeNode.degree];
+				} else { // non leaf
+					for (i = 0; i <= mrn.size; i++) {
+						newnode.nodes[i] = mrn.nodes[i];
+						mrn.nodes[i].parent = newnode;
+						this.mr.update_parent_rec(mrn.nodes[i]); // parent changed
+						if (i != mrn.size) newnode.keys[i] = minimum_key(mrn.nodes[i+1]);
+					}
+				}
+
+				if (mrn.parent != null) { // non root
+					for (i = 0; i <= parent_mrn.size; i++) {
+						if (parent_mrn.nodes[i] == node) {
+							mrn.parent.nodes[i] = newnode;
+							if (parent_mrn != null) parent_mrn.nodes[i] = newnode;
 							break;
 						}
 					}
 				}
 
-				if (ni.is_leaf) { // leaf
-					for (i = 0; i < ni.size; i++) {
-						newnode.nodes[i] = ni.nodes[i];
-						newnode.keys[i] = ni.nodes[i].size; // key is stored in this entry
-					}
-					newnode.nodes[BpTreeNode.degree] = ni.nodes[BpTreeNode.degree];
-				}
-				else { // non leaf
-					for (i = 0; i < ni.size; i++) {
-						newnode.nodes[i] = ni.nodes[i];
-						ni.nodes[i].parent = newnode;
-						update_parentInfo(ni.nodes[i]); // parent changed
-						newnode.keys[i] = minimum_key(ni.nodes[i+1]);
-					}
-					newnode.nodes[i] = ni.nodes[i];
-					ni.nodes[i].parent = newnode;
-					update_parentInfo(ni.nodes[i]); // parent changed
-				}
-				ni.ownaddr = newnode;
+				mrn.ownhash = newnode.hashCode();
 				if (node == this.root) this.root = newnode;
 				return newnode;
 			}
 			return null;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			System.out.println("fatal error: EMEs");
 			return null; // should we try again?
-		}
-	}
-
-	void addInfo(BpTreeNode node)
-	{
-		BpTreeNodeInfo newinfo = new BpTreeNodeInfo(node, node.size, node.is_leaf);
-
-		int i;
-
-		try
-		{
-			for (i = 0; i < node.size; i++) { // deep copy
-				newinfo.nodes[i] = node.nodes[i];
-			}
-
-			if (node.is_leaf) newinfo.nodes[BpTreeNode.degree] = node.nodes[BpTreeNode.degree];
-			else newinfo.nodes[i] = node.nodes[i]; // non leaf
-			newinfo.parent = node.parent;
-
-			newinfo.next = this.btni.next;
-			this.btni.next = newinfo;
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			// fatal: node information has not made yet
-			System.out.println("fatal error: EMEs");
-		}
-	}
-
-	// updates nodeinfo
-	void update_NodeInfo(BpTreeNode node, boolean is_add)
-	{
-		BpTreeNodeInfo target_ni = search_NodeInfo(node);
-		int i;
-		int end;
-
-		try
-		{
-			if (target_ni != null) {
-				if (is_add) end = node.size;
-				else end = target_ni.size;
-				for (i = 0; i < end; i++) {
-					target_ni.nodes[i] = node.nodes[i];
-				}
-				if (node.is_leaf) target_ni.nodes[BpTreeNode.degree] = node.nodes[BpTreeNode.degree];
-				else target_ni.nodes[i] = node.nodes[i]; // non leaf
-				target_ni.size = node.size;
-				target_ni.parent = node.parent;
-			}
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			// fatal: tree can be inconsistent state
-			// e.g., the same entries can be at two nodes
-			System.out.printf("fatal error: EMEs");
-		}
-	}
-
-	// delete nodeinfo
-	void delInfo(BpTreeNode node)
-	{
-		BpTreeNodeInfo ni;
-
-		try
-		{
-			ni = this.btni;
-			if (ni.ownaddr == node) {
-				this.btni = ni.next;
-				return;
-			}
-
-			while (ni.next != null) {
-				if (ni.next.ownaddr == node) {
-					ni.next = ni.next.next;
-					break;
-				}
-				ni = ni.next;
-			}
-		}
-		catch (ECCuncorrectableMemoryError eme)
-		{
-			// ignore btni's error
 		}
 	}
 
@@ -233,7 +99,7 @@ public class EBpTree {
 			else
 				return minimum_key(node.nodes[0]); // recursive call
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			// EMEs can occur at
 			//   - reading node.is_leaf
@@ -241,10 +107,10 @@ public class EBpTree {
 			//   - reading array value (keys[i]) (->iaload)
 			//   - reading array head addr (nodes[0])
 			if (is_brokenNode(node)) {
-				BpTreeNodeInfo ni = search_NodeInfo(node);
-				if (ni != null) {
-					if (ni.is_leaf) return ni.nodes[0].size; // key is here
-					else return minimum_key(ni.nodes[0]);
+				BpTreeMRecNode mrn = this.mr.get_rec(node);
+				if (mrn != null) {
+					if (mrn.is_leaf) return mrn.nodes[0].size; // key is here
+					else return minimum_key(mrn.nodes[0]);
 				}
 			}
 			// should not reach here
@@ -272,7 +138,7 @@ public class EBpTree {
 
 			return node;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			// EMEs can occur at
 			//   - reading addr of root
@@ -295,7 +161,7 @@ public class EBpTree {
 
 		if (node.size == BpTreeNode.degree || node.is_leaf) {
 			addnode.parent = node;
-			update_parentInfo(addnode); // parent changed
+			this.mr.update_parent_rec(addnode); // parent changed
 			return;
 		}
 
@@ -305,7 +171,7 @@ public class EBpTree {
 			if (node.nodes[0] == null) {
 				node.nodes[0] = addnode;
 				addnode.parent = node;
-				update_parentInfo(addnode);
+				this.mr.update_parent_rec(addnode);
 				return;
 			}
 
@@ -321,7 +187,7 @@ public class EBpTree {
 			}
 			node.size++;
 			addnode.parent = node;
-			update_parentInfo(addnode);
+			this.mr.update_parent_rec(addnode);
 			return;
 		}
 
@@ -338,7 +204,7 @@ public class EBpTree {
 		node.size++;
 
 		addnode.parent = node;
-		update_parentInfo(addnode);
+		this.mr.update_parent_rec(addnode);
 
 		// EMEs can occur at
 		//   - reading node.entries
@@ -429,6 +295,7 @@ public class EBpTree {
 		try
 		{
 			right_node = new BpTreeNode();
+			this.mr.add_rec(right_node, false); // non leaf
 			right_node.parent = p;
 
 			for (i = left_node.size-1; right_node.size < d/2; i--) {
@@ -445,11 +312,12 @@ public class EBpTree {
 			if (left_node.size == ((d+1)/2 -1))
 				insert_node_to_node(right, left_node);
 
-			update_NodeInfo(left_node, false); // entry decreases
-			addInfo(right_node);
+			this.mr.update_children_rec(left_node); // children decrease
+			this.mr.update_parent_rec(right_node);
+			this.mr.update_children_rec(right_node);
 			insert_nodes_to_node(left_node, right_node, p);
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			// EMEs can occur at
 			//   - allocating new BpTreeNode (write access)
@@ -479,21 +347,23 @@ public class EBpTree {
 
 			if (node == null) { // no parent node
 				this.root = new BpTreeNode();
+				this.mr.add_rec(this.root, false); // new root is not leaf
 				this.root.keys[0] = right_minkey;
 				this.root.size = 1;
 				this.root.nodes[0] = left;
 				this.root.nodes[1] = right;
+				this.mr.update_children_rec(this.root);
+
 				left.parent = this.root;
 				right.parent = this.root;
-				addInfo(this.root);
-				update_parentInfo(left);
-				update_parentInfo(right);
+				this.mr.update_parent_rec(left);
+				this.mr.update_parent_rec(right);
 				return;
 			}
 
 			if (node.size < BpTreeNode.degree) {
 				insert_node_to_node(right, node);
-				update_NodeInfo(node, true); // parent entry increase
+				this.mr.update_children_rec(node); // parent entry increase
 				return;
 			}
 
@@ -501,7 +371,7 @@ public class EBpTree {
 				insert_node_split(right, node);
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(right)) {
 				BpTreeNode new_right = replaceNode(right);
@@ -529,6 +399,7 @@ public class EBpTree {
 		try
 		{
 			right = new BpTreeNode();
+			this.mr.add_rec(right, true); // new leaf record
 			right.parent = p;
 			right.is_leaf = true;
 
@@ -549,11 +420,12 @@ public class EBpTree {
 			right.nodes[d] = left.nodes[d];
 			left.nodes[d] = right;
 
-			update_NodeInfo(left, false); // entry decreases
-			addInfo(right);
+			this.mr.update_children_rec(left); // children decreases
+			this.mr.update_parent_rec(right);
+			this.mr.update_children_rec(right);
 			insert_nodes_to_node(left, right, p);
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(left) || is_brokenNode(right)) {
 				BpTreeNode new_left = replaceNode(left);
@@ -581,7 +453,7 @@ public class EBpTree {
 
 			rewrite_key(before, after, node.parent); // recursive call
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node)) {
 				BpTreeNode newnode = replaceNode(node);
@@ -616,25 +488,25 @@ public class EBpTree {
 			p = node.parent;
 			if (p == null) { // root node
 				if (node.nodes[1] != null) { // two or more sub-trees
-					update_NodeInfo(node, false); // entry decreases
+					this.mr.update_children_rec(node); // entry decreases
 				} else { // only one sub-tree
 					this.root = node.nodes[0];
 					this.root.parent = null;
-					update_parentInfo(this.root);
-					delInfo(node);
+					this.mr.update_parent_rec(this.root);
+					this.mr.remove_rec(node);
 				}
 				return; // finish balancing
 			}
 
 			if (node.nodes[(BpTreeNode.degree)/2] != null) { // entries >= ROUNDUP((degree+1)/2)
 				// node has enough entries
-				update_NodeInfo(node, false); // entry decreases
+				this.mr.update_children_rec(node); // entry decreases
 				return;
 			} else {
-				update_NodeInfo(node, false); // entry decreases
+				this.mr.update_children_rec(node); // entry decreases
 				// fetch two siblings (left and right)
 				for (i = 0; i <= p.size; i++) {
-					if (p.nodes[i] == node) {
+				if (p.nodes[i] == node) {
 						if (i != 0) left = p.nodes[i-1];
 						if (i != p.size) right = p.nodes[i+1];
 						break;
@@ -647,8 +519,8 @@ public class EBpTree {
 						insert_node_to_node(left.nodes[left.size], node);
 						delete_node_from_node(left.nodes[left.size], left);
 						rewrite_key(minimum_key(node.nodes[1]), minimum_key(node.nodes[0]), p);
-						update_NodeInfo(left, false); // entry decreases
-						update_NodeInfo(node, true); // entry increases
+						this.mr.update_children_rec(left); // entry decreases
+						this.mr.update_children_rec(node); // entry increases
 						return;
 					}
 				}
@@ -662,8 +534,8 @@ public class EBpTree {
 						right.nodes[i] = null;
 						right.size--;
 						rewrite_key(minimum_key(node.nodes[node.size]), minimum_key(right.nodes[0]), p);
-						update_NodeInfo(right, false); // entry decreases
-						update_NodeInfo(node, true); // entry increases
+						this.mr.update_children_rec(right); // entry decreases
+						this.mr.update_children_rec(node); // entry increases
 						return;
 					}
 				}
@@ -672,20 +544,20 @@ public class EBpTree {
 				if (left != null) {
 					merge_nodes(left, node);
 					delete_node_from_node(node, p);
-					update_NodeInfo(left, true); // entry increase
-					delInfo(node);
+					this.mr.update_children_rec(left); // entry increase
+					this.mr.remove_rec(node);
 					balance_tree(p);
 				} else if (right != null) {
 					// implies node is leftmost child of node.parent
 					merge_nodes(node, right);
 					delete_node_from_node(right, p);
-					update_NodeInfo(node, true); // entry increases
-					delInfo(right);
+					this.mr.update_children_rec(node); // entry increases
+					this.mr.remove_rec(right);
 					balance_tree(p);
 				}
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node) || is_brokenNode(left) || is_brokenNode(right) || is_brokenNode(p)) {
 				BpTreeNode newnode = replaceNode(node);
@@ -696,8 +568,8 @@ public class EBpTree {
 			} else if (is_brokenNode(this.root)) { // from this.root.parent = null;
 				replaceNode(this.root);
 				this.root.parent = null;
-				update_parentInfo(this.root);
-				delInfo(node);
+				this.mr.update_children_rec(this.root);
+				this.mr.remove_rec(node);
 			} else { // should not reach here
 				System.out.println("fatal error: EMEs");
 				System.exit(1);
@@ -747,8 +619,8 @@ public class EBpTree {
 					insert_key_to_leaf(right.keys[0], right.nodes[0], node);
 					delete_key_from_leaf(right.keys[0], right);
 					rewrite_key(node.keys[node.size-1], right.keys[0], p);
-					update_NodeInfo(node, true); // entry increases
-					update_NodeInfo(right, false); //entry decreases
+					this.mr.update_children_rec(node); // entry increases
+					this.mr.update_children_rec(right); // entry decreases
 					return;
 				}
 			}
@@ -759,8 +631,8 @@ public class EBpTree {
 					insert_key_to_leaf(left.keys[left.size-1], left.nodes[left.size-1], node);
 					delete_key_from_leaf(left.keys[left.size-1], left);
 					rewrite_key(node.keys[1], node.keys[0], p);
-					update_NodeInfo(node, true); // entry increases
-					update_NodeInfo(left, false); // entry decreases
+					this.mr.update_parent_rec(node); // entry increases
+					this.mr.update_parent_rec(left); // entry decreases
 					return;
 				}
 			}
@@ -770,20 +642,20 @@ public class EBpTree {
 				left.nodes[BpTreeNode.degree] = right;
 				merge_leaves(left, node);
 				delete_node_from_node(node, p);
-				update_NodeInfo(left, true); // entry increases
-				delInfo(node);
+				this.mr.update_children_rec(left); // entry increases
+				this.mr.remove_rec(node);
 				balance_tree(p);
 			} else if (right != null) { // merge into node
 			// implies node == node.parent.nodes[0]
 				node.nodes[BpTreeNode.degree] = right.nodes[BpTreeNode.degree];
 				merge_leaves(node, right);
 				delete_node_from_node(right, p);
-				update_NodeInfo(node, true); // entry increases
-				delInfo(right);
+				this.mr.update_children_rec(node); // entry increases
+				this.mr.remove_rec(right);
 				balance_tree(p);
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node) || is_brokenNode(left) || is_brokenNode(right) || is_brokenNode(p)) {
 				BpTreeNode newnode = replaceNode(node);
@@ -821,7 +693,7 @@ public class EBpTree {
 				}
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node)) {
 				replaceNode(node);
@@ -832,22 +704,21 @@ public class EBpTree {
 	}
 
 	public void p(){ p(this.root); }
-	public void treeinfo_p() // debug
+/*	public void treeinfo_p() // debug
 	{
-		BpTreeNodeInfo ni;
-		ni = this.btni;
+		BpTreeMRec mrn = this.mr;
 		int i;
 
-		while (ni != null) {
-			if (!ni.is_leaf) {
-				System.out.println("parent => "+ni.ownaddr);
-				for (i = 0; i <= ni.size; i++)
-					System.out.println("child => "+ni.nodes[i]+" "+ni.nodes[i].keys[0]);
+		while (mrn != null) {
+			if (!mrn.is_leaf) {
+				System.out.println("parent => "+mrn.ownhash);
+				for (i = 0; i <= mrn.size; i++)
+					System.out.println("child => "+mrn.nodes[i]+" "+mrn.nodes[i].keys[0]);
 			}
-			else System.out.println("leaf => "+ni.ownaddr+" "+ni.ownaddr.keys[0]);
-			ni = ni.next;
+			else System.out.println("leaf => "+mrn.ownhash+" "+mrn.ownhash.keys[0]);
+			mrn = mrn.next;
 		}
-	}
+	}*/
 
 	public void insert(int key, Object obj)
 	{
@@ -858,17 +729,17 @@ public class EBpTree {
 			if (node == null) return;
 			if (node.is_key_included(key)) return;
 
-			BpTreeNode insertnode = new BpTreeNode(obj);
-			insertnode.size = key; // this entry is used to recover leafnode key
+			BpTreeNode objectnode = new BpTreeNode(obj);
+			objectnode.size = key; // this entry is used to recover leafnode key
 
 			if (node.size < BpTreeNode.degree) {
-				insert_key_to_leaf(key, insertnode, node);
-				update_NodeInfo(node, true);
+				insert_key_to_leaf(key, objectnode, node);
+				this.mr.update_children_rec(node);
 			} else {
-				insert_leaf_split(key, insertnode, node);
+				insert_leaf_split(key, objectnode, node);
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node)) {
 				BpTreeNode newnode = replaceNode(node);
@@ -891,19 +762,19 @@ public class EBpTree {
 			delete_key_from_leaf(key, node);
 
 			if (node == this.root) {
-				update_NodeInfo(node, false); // entry decreases
+				this.mr.update_children_rec(node); // entry decreases
 			} else if (node.size >= (BpTreeNode.degree+1)/2) {
 				if (key == head_key)
 					rewrite_key(head_key, node.keys[0], node.parent);
-				update_NodeInfo(node, false); // entry decreases
+				this.mr.update_children_rec(node); // entry decreases
 			} else {
 				if (key == head_key)
 					rewrite_key(head_key, node.keys[0], node.parent);
-				update_NodeInfo(node, false); // entry decreases
+				this.mr.update_children_rec(node); // entry decreases
 				delete_key_not_enough(key, node);
 			}
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node)) {
 				replaceNode(node);
@@ -923,7 +794,7 @@ public class EBpTree {
 			}
 			return null;
 		}
-		catch (ECCuncorrectableMemoryError eme)
+		catch (ECCuncorrectableMemoryException eme)
 		{
 			if (is_brokenNode(node)) {
 				replaceNode(node);

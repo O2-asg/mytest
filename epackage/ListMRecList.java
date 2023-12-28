@@ -3,28 +3,28 @@ package epackage;
 class ListMRecList {
 	ListMRecNode head;
 
-	ListMRecList(ListNode nextnode, int hash)
+	ListMRecList(int hash, ListNode nextnode)
 	{
-		this.head = new ListMRecNode(nextnode, hash);
+		this.head = new ListMRecNode(hash, nextnode);
 	}
 
-	void addNode(ListNode nextnode, int hash)
+	void addNode(int hash, ListNode nextnode)
 	{
-		ListMRecNode newnode = new ListMRecNode(nextnode, hash);
+		ListMRecNode newnode = new ListMRecNode(hash, nextnode);
 
 		newnode.next = this.head;
 		this.head = newnode;
 	}
 
 	// deletes record of broken (or to be deleted) ListNode and
-	// returns brokenNode.next
+	// returns record of brokenNode (to restructure)
 	// hash is brokenNode.hashCode()
-	ListNode delNode(int hash)
+	ListMRecNode delAndRetNode(int hash)
 	{
-		ListNode ret = null;
+		ListMRecNode ret = null;
 
 		if (this.head.hash == hash) { // this.head holds the info
-			ret = this.head.nextnode;
+			ret = this.head;
 			this.head = this.head.next;
 			return ret;
 		}
@@ -33,16 +33,36 @@ class ListMRecList {
 
 		while (n.next != null) {
 			if (n.next.hash == hash) { // find the info
-				ret = n.next.nextnode; // get next to repair data structure
+				ret = n.next; // get next to repair data structure
 				n.next = n.next.next; // delete record
 				return ret;
 			}
 			n = n.next;
 		}
 
-		/* should not reach here */
 		return ret; // null
 	}
+
+	// deletes record only
+	// hash is deletenode.hashCode()
+	void delNode(int hash)
+	{
+		if (this.head.hash == hash) { // this.head holds the record
+			this.head = this.head.next;
+			return;
+		}
+
+		ListMRecNode n = this.head;
+
+		while (n.next != null) {
+			if (n.next.hash == hash) { // found the record
+				n.next = n.next.next; // delete record
+				return;
+			}
+			n = n.next;
+		}
+	}
+
 
 	// after deletion of ListNode, connection has changed
 	// must update connection

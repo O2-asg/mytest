@@ -14,10 +14,10 @@ public class EMEsList_v2_recoverTester {
 			h[i] = o[i].hashCode();
 		}
 
-		EList_v2_recover lst = new EList_v2_recover(o[0], h[0]);
+		EList_v2_recover lst = new EList_v2_recover(h[0], o[0]);
 
 		for (int i = 1; i < num; i++) {
-			lst.addNode(o[i], h[i]);
+			lst.addNode(h[i], o[i]);
 		}
 
 		start = System.nanoTime();

@@ -4,7 +4,7 @@ public class MyListTester {
 	public static void main(String[] args)
 	{
 		MyList lst = new MyList();
-		int num = 1000;
+		int num = 1000000;
 		Object o[] = new Object[num];
 		double million = 1000000;
 		long start, end;
@@ -15,15 +15,19 @@ public class MyListTester {
 			h[i] = o[i].hashCode();
 		}
 
-		for (int i = 0; i < num; i++) {
-			lst.addNode(o[i], h[i]);
-		}
+System.out.println("-----List GC-----");
 
 		start = System.nanoTime();
 		for (int i = 0; i < num; i++) {
-			lst.delNode(h[i]);
+			lst.addNode(h[i], o[i]);
 		}
 		end = System.nanoTime();
+
+/*		start = System.nanoTime();
+		for (int i = 0; i < num; i++) {
+			lst.delNode(h[i]);
+		}
+		end = System.nanoTime();*/
 
 		System.out.println((end-start)/million); // ms
 	}

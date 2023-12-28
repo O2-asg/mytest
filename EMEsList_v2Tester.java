@@ -3,7 +3,7 @@ import epackage.EList_v2;
 public class EMEsList_v2Tester {
 	public static void main(String[] args)
 	{
-		int num = 1000;
+		int num = 1000000;
 		Object o[] = new Object[num];
 		double million = 1000000;
 		long start, end;
@@ -14,17 +14,21 @@ public class EMEsList_v2Tester {
 			h[i] = o[i].hashCode();
 		}
 
-		EList_v2 lst = new EList_v2(o[0], h[0]);
+		EList_v2 lst = new EList_v2(h[0], o[0]);
 
-		for (int i = 1; i < num; i++) {
-			lst.addNode(o[i], h[i]);
-		}
+System.out.println("-----List GC-----");
 
 		start = System.nanoTime();
 		for (int i = 1; i < num; i++) {
-			lst.delNode(h[i]);
+			lst.addNode(h[i], o[i]);
 		}
 		end = System.nanoTime();
+
+/*		start = System.nanoTime();
+		for (int i = 1; i < num; i++) {
+			lst.delNode(h[i]);
+		}
+		end = System.nanoTime();*/
 
 		System.out.println((end-start)/million); // ms
 	}

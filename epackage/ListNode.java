@@ -3,23 +3,23 @@ package epackage;
 // EMEs-aware list node
 // obj and hash can be any data
 class ListNode {
+	int key;
 	Object obj;
-	int hash;
 	ListNode next;
 
 	// constructor
-	ListNode(Object obj, int hash)
+	ListNode(int key, Object value)
 	{
-		this.obj = obj;
-		this.hash = hash;
+		this.key = key;
+		this.obj = value;
 		next = null;
 	}
 
 	// constructor for head of list
 	ListNode()
 	{
+		this.key = 0;
 		this.obj = null;
-		this.hash = 0;
 		next = null;
 	}
 }

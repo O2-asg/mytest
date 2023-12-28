@@ -1,26 +1,26 @@
 package epackage;
 
 // EMEs-aware list
-public class EList_v2_recover {
+public class EList_Recover {
 	ListNode head;
 	ListMRecR mr;
 
 	// EMEs can occur here
-	public EList_v2_recover(Object value, int key)
+	public EList_Recover(int key, Object value)
 	{
-		this.head = new ListNode(value, key);
-		this.mr = new ListMRecR(this.head.hashCode(), value, key);
+		this.head = new ListNode(key, value);
+		this.mr = new ListMRecR(this.head.hashCode(), key, value);
 	}
 
-	private EList_v2_recover(EList_v2_recover original)
+	private EList_Recover(EList_Recover original)
 	{
 		this.head = original.head;
 		this.mr = original.mr;
 	}
 
-	public EList_v2_recover cloneInstance()
+	public EList_Recover cloneInstance()
 	{
-		return new EList_v2_recover(this);
+		return new EList_Recover(this);
 	}
 
 	// check ListNode (broken or not)
@@ -32,8 +32,8 @@ public class EList_v2_recover {
 		try
 		{
 			// read/write check
+			node.key = node.key;
 			node.obj = node.obj;
-			node.hash = node.hash;
 			node.next = node.next;
 
 			return false; // not broken
@@ -45,18 +45,32 @@ public class EList_v2_recover {
 	}
 
 	// add new record to Recorder
-	void addEntry(ListNode node, ListNode nextnode)
+	void add_rec(ListNode node, ListNode nextnode)
 	{
 		if (node == null) return; // error
 
 		try
 		{
-			this.mr.add_rec(node, nextnode, node.obj, node.hash);
+			this.mr.add_rec(node, nextnode, node.key, node.obj);
 		}
 		// ignore Recorder's error
 		catch (ECCuncorrectableMemoryError eme)
 		{
-			System.out.println("addEntry failed: broken m-rec");
+			System.out.println("add_rec failed: broken m-rec");
+		}
+	}
+
+	void remove_rec(ListNode target)
+	{
+		if (target == null) return;
+
+		try
+		{
+			this.mr.remove_rec(target);
+		}
+		catch (ECCuncorrectableMemoryError eme)
+		{
+			System.out.println("remove_rec failed: broken m-rec");
 		}
 	}
 
@@ -71,7 +85,7 @@ public class EList_v2_recover {
 
 		try
 		{
-			ret = this.mr.remove_rec(target);
+			ret = this.mr.remove_and_get_rec(target);
 			return ret;
 		}
 		// ignore Recorder's error
@@ -82,7 +96,7 @@ public class EList_v2_recover {
 		}
 	}
 
-	void updateEntry(ListNode node, ListNode nextnode)
+	void update_rec(ListNode node, ListNode nextnode)
 	{
 		try
 		{
@@ -90,7 +104,7 @@ public class EList_v2_recover {
 		}
 		catch (ECCuncorrectableMemoryError eme)
 		{
-			System.out.println("updateEntry failed: broken m-rec");
+			System.out.println("update_rec failed: broken m-rec");
 		}
 	}
 
@@ -104,12 +118,12 @@ public class EList_v2_recover {
 		try
 		{
 			// remove_rec returns next ListNode
-			headrec = this.mr.remove_rec(this.head);
+			headrec = this.mr.remove_and_get_rec(this.head);
 			if (headrec != null) {
-				newhead = new ListNode(headrec.o, headrec.key);
+				newhead = new ListNode(headrec.key, headrec.o);
 				newhead.next = this.head;
 				this.head = newhead;
-				this.mr.add_rec(newhead, this.head.next, newhead.obj, newhead.hash);
+				this.mr.add_rec(newhead, this.head.next, newhead.key, newhead.obj);
 			}
 		}
 		catch (ECCuncorrectableMemoryError eme)
@@ -138,11 +152,11 @@ public class EList_v2_recover {
 			while (n != null) {
 				if (n.next == target) {
 					mrn = delEntry(target);
-					newnode = new ListNode(mrn.o, mrn.key);
+					newnode = new ListNode(mrn.key, mrn.o);
 					newnode.next = mrn.nextnode;
-					addEntry(newnode, newnode.next);
+					add_rec(newnode, newnode.next);
 					n.next = newnode;
-					updateEntry(n, newnode);
+					update_rec(n, newnode);
 					break;
 				}
 				n = n.next;
@@ -160,26 +174,26 @@ public class EList_v2_recover {
 	}
 
 	// add node to EMEs-aware list
-	public void addNode(Object value, int key)
+	public void addNode(int key, Object value)
 	{
 		ListNode newnode = null, oldhead = this.head;
 
 		try
 		{
 			// normal operation
-			newnode = new ListNode(value, key);
+			newnode = new ListNode(key, value);
 
 			newnode.next = oldhead; // set next to old head
 			this.head = newnode; // set head to newnode
 
-			// update m-rec
-			addEntry(newnode, oldhead);
+			// record newly allocated ListNode
+			add_rec(newnode, oldhead);
 		}
 		catch (ECCuncorrectableMemoryError eme)	// at newnode
 		{
 			// broken newnode
 			if (is_brokenNode(newnode)) {
-				addNode(value, key); // try again!
+				addNode(key, value); // try again!
 				return;
 			}
 		}
@@ -193,15 +207,15 @@ public class EList_v2_recover {
 		try
 		{
 			// normal operation
-			if (this.head.hash == key) {
+			if (this.head.key == key) {
 				this.head = this.head.next;
-				delEntry(n);
+				remove_rec(n);
 				return;
 			}
 
 			n = n.next;
 			while (n != null) {
-				if (n.hash == key) {
+				if (n.key == key) {
 					break;
 				}
 				prev = n;
@@ -210,8 +224,8 @@ public class EList_v2_recover {
 
 			if (n != null) {
 				prev.next = n.next;
-				delEntry(n);
-				updateEntry(prev, n.next);
+				remove_rec(n);
+				update_rec(prev, n.next);
 			}
 		}
 		catch (ECCuncorrectableMemoryError eme) // at this.head or any other node
@@ -240,7 +254,7 @@ public class EList_v2_recover {
 		{
 			// normal operation
 			while (n != null) {
-				System.out.printf("Object %s, hashCode is %x\n", n.obj.toString(), n.hash);
+				System.out.printf("Object %s, key is %d\n", n.obj.toString(), n.key);
 				n = n.next;
 			}
 		}
@@ -268,7 +282,7 @@ public class EList_v2_recover {
 		{
 			// normal operation
 			while (n != null) {
-				if (n.hash == key)
+				if (n.key == key)
 					return n.obj;
 				n = n.next;
 			}

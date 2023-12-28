@@ -10,34 +10,34 @@ public class MyChainHash {
 		this.tbl = new MyList[BUCKET_SIZE];
 	}
 
-	public void hash_store(Object obj, int hashcode)
+	public void hash_store(int key, Object obj)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		if (this.tbl[idx] == null) {
 			this.tbl[idx] = new MyList();
 		}
 
-		this.tbl[idx].addNode(obj, hashcode);
+		this.tbl[idx].addNode(key, obj);
 	}
 
-	public void hash_delete(int hashcode)
+	public void hash_delete(int key)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		if (this.tbl[idx] == null)
 			return;
 
-		this.tbl[idx].delNode(hashcode);
+		this.tbl[idx].delNode(key);
 	}
 
-	public Object hash_get(int hashcode)
+	public Object hash_get(int key)
 	{
-		int idx = hashcode % BUCKET_SIZE;
+		int idx = key % BUCKET_SIZE;
 
 		if (this.tbl[idx] == null)
 			return null;
 
-		return this.tbl[idx].getObject(hashcode);
+		return this.tbl[idx].getObject(key);
 	}
 }

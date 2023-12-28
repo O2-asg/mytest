@@ -6,10 +6,10 @@ class ListMRecNode {
 	ListNode nextnode;
 	ListMRecNode next;
 
-	ListMRecNode(ListNode nextnode, int hash)
+	ListMRecNode(int hash, ListNode nextnode)
 	{
-		this.nextnode = nextnode;
 		this.hash = hash;
+		this.nextnode = nextnode;
 		this.next = null;
 	}
 }

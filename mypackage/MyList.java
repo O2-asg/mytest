@@ -8,21 +8,21 @@ public class MyList {
 		this.head = new ListNode();
 	}
 
-	public void addNode(Object obj, int hash)
+	public void addNode(int key, Object obj)
 	{
-		ListNode newnode = new ListNode(obj, hash);
+		ListNode newnode = new ListNode(key, obj);
 
 		newnode.next = this.head.next;
 		this.head.next = newnode;
 	}
 
-	public void delNode(int hash)
+	public void delNode(int key)
 	{
 		ListNode n = this.head;
 		ListNode target = null;
 
 		while (n.next != null) {
-			if (n.next.hash == hash) {
+			if (n.next.key == key) {
 				target = n.next;
 				break;
 			}
@@ -43,19 +43,19 @@ public class MyList {
 				n = n.next;
 				continue;
 			}
-			System.out.printf("Object %s, hashCode is %x\n", n.obj.toString(), n.hash);
+			System.out.printf("Object %s, key is %d\n", n.obj.toString(), n.key);
 			n = n.next;
 		}
 	}
 
-	public Object getObject(int hash)
+	public Object getObject(int key)
 	{
 		ListNode n = this.head;
 
 		n = n.next;
 
 		while (n != null) {
-			if (n.hash == hash)
+			if (n.key == key)
 				return n.obj;
 			n = n.next;
 		}

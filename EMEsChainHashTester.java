@@ -15,7 +15,7 @@ public class EMEsChainHashTester {
 		for (i = 0; i < NUM; i++) {
 			o[i] = new Object();
 			h[i] = o[i].hashCode();
-			ch.hash_store(o[i], h[i]);
+			ch.hash_store(h[i], o[i]);
 		}
 
 		start = System.nanoTime();
